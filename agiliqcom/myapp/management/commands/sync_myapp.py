@@ -7,7 +7,12 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         for my_id in args:
-            instance, created  = MyModel.objects.get_or_create(my_id=my_id)
+            created = False
+            try:
+                instance = MyModel.objects.get(my_id=my_id)
+            except MyModel.DoesNotExist:
+                instance = MyModel.objects.create(my_id=my_id)
+                created = True
             self.stdout.write('%s %s' % (instance.id, created))
             instance.delete()
             MyModel.objects.all()
