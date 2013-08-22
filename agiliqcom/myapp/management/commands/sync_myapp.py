@@ -1,8 +1,22 @@
-from django.core.management.base import BaseCommand, CommandError
+from threading import Thread
 
+from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
 from myapp.models import MyModel
+
+
+class MyThread(Thread):
+
+    def __init__(self, my_id):
+        super(MyThread, self).__init__(name=my_id)
+        self.my_id = my_id
+
+    def run(self):
+        instance, created = MyModel.objects.get_or_create(my_id=self.my_id)
+        print '%s %s' % (instance.id, created)
+        instance.delete()
+        return
 
 
 class Command(BaseCommand):
@@ -11,21 +25,6 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         for my_id in args:
-            instance, created = self.get_or_create(my_id)
-            self.stdout.write('%s %s' % (instance.id, created))
-            instance.delete()
+            thread = MyThread(my_id=my_id)
+            thread.start()
             MyModel.objects.all()
-
-    def get_or_create(self, my_id):
-        created = False
-        try:
-            instance = MyModel.objects.get(my_id=my_id)
-        except MyModel.DoesNotExist:
-            with transaction.commit_on_success():
-                try:
-                    instance = MyModel.objects.create(my_id=my_id)
-                    created = True
-                except MyModel.DoesNotExist:
-                    instance = MyModel.objects.get(my_id=my_id)
-        return instance, created
-
